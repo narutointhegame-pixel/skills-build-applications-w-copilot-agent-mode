@@ -1,5 +1,28 @@
 import { useEffect, useState } from 'react';
-import { fetchCollection } from '../api';
+
+const normalizePayload = (payload) => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (payload && Array.isArray(payload.items)) {
+    return payload.items;
+  }
+
+  if (payload && Array.isArray(payload.results)) {
+    return payload.results;
+  }
+
+  if (payload && Array.isArray(payload.data)) {
+    return payload.data;
+  }
+
+  if (payload && Array.isArray(payload.records)) {
+    return payload.records;
+  }
+
+  return [];
+};
 
 function Leaderboard() {
   const [entries, setEntries] = useState([]);
@@ -8,8 +31,17 @@ function Leaderboard() {
   useEffect(() => {
     const loadEntries = async () => {
       try {
-        const data = await fetchCollection('leaderboard');
-        setEntries(data);
+        const endpoint = import.meta.env.VITE_CODESPACE_NAME?.trim()
+          ? `https://${import.meta.env.VITE_CODESPACE_NAME}-8000.app.github.dev/api/leaderboard/`
+          : 'http://127.0.0.1:8000/api/leaderboard/';
+
+        const response = await fetch(endpoint);
+        if (!response.ok) {
+          throw new Error('Unable to load leaderboard');
+        }
+
+        const payload = await response.json();
+        setEntries(normalizePayload(payload));
       } catch (err) {
         setError(err.message);
       }
