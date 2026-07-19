@@ -10,9 +10,47 @@ const app = express();
 const port = Number(process.env.PORT || 8000);
 const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/octofit_db';
 
+const fallbackUsers = [
+  { id: 1, name: 'Ava Chen', email: 'ava.chen@example.com', role: 'admin' },
+  { id: 2, name: 'Noah Patel', email: 'noah.patel@example.com', role: 'member' },
+];
+
+const fallbackActivities = [
+  { id: 1, type: 'run', duration: 35, calories: 410, date: '2026-07-18T00:00:00.000Z' },
+  { id: 2, type: 'strength', duration: 50, calories: 320, date: '2026-07-19T00:00:00.000Z' },
+];
+
+let mongoConnected = false;
+
 const getApiBaseUrl = () => {
   const codespaceName = process.env.CODESPACE_NAME;
   return codespaceName ? `https://${codespaceName}-8000.app.github.dev` : 'http://localhost:8000';
+};
+
+const getUsers = async () => {
+  if (!mongoConnected) {
+    return fallbackUsers;
+  }
+
+  try {
+    return await User.find({}).lean();
+  } catch (error) {
+    console.warn('Falling back to static users data.', error);
+    return fallbackUsers;
+  }
+};
+
+const getActivities = async () => {
+  if (!mongoConnected) {
+    return fallbackActivities;
+  }
+
+  try {
+    return await Activity.find({}).lean();
+  } catch (error) {
+    console.warn('Falling back to static activities data.', error);
+    return fallbackActivities;
+  }
 };
 
 app.use(cors());
@@ -27,7 +65,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.get('/api/users', async (_req, res) => {
-  const users = await User.find({}).lean();
+  const users = await getUsers();
   res.json(users);
 });
 
@@ -47,7 +85,7 @@ app.post('/api/teams', async (req, res) => {
 });
 
 app.get('/api/activities', async (_req, res) => {
-  const activities = await Activity.find({}).lean();
+  const activities = await getActivities();
   res.json(activities);
 });
 
@@ -79,8 +117,10 @@ app.post('/api/workouts', async (req, res) => {
 const startServer = async () => {
   try {
     await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 2000 });
+    mongoConnected = true;
     console.log('MongoDB connected');
   } catch (error) {
+    mongoConnected = false;
     console.warn('MongoDB unavailable, continuing without database connection.', error);
   }
 
