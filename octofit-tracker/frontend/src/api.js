@@ -1,5 +1,14 @@
+const getRuntimeEnv = () => {
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    return import.meta.env;
+  }
+
+  return typeof process !== 'undefined' && process.env ? process.env : {};
+};
+
 const getApiBaseUrl = () => {
-  const codespaceName = import.meta.env.VITE_CODESPACE_NAME?.trim();
+  const env = getRuntimeEnv();
+  const codespaceName = env.VITE_CODESPACE_NAME?.trim();
 
   if (codespaceName) {
     return `https://${codespaceName}-8000.app.github.dev/api`;
