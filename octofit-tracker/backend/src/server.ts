@@ -20,6 +20,21 @@ const fallbackActivities = [
   { id: 2, type: 'strength', duration: 50, calories: 320, date: '2026-07-19T00:00:00.000Z' },
 ];
 
+const fallbackTeams = [
+  { id: 1, name: 'Momentum', focus: 'Endurance', members: 8 },
+  { id: 2, name: 'Powerhouse', focus: 'Strength', members: 6 },
+];
+
+const fallbackLeaderboard = [
+  { id: 1, name: 'Ava Chen', score: 980, streak: 12 },
+  { id: 2, name: 'Noah Patel', score: 945, streak: 8 },
+];
+
+const fallbackWorkouts = [
+  { id: 1, title: 'HIIT Cardio Blast', difficulty: 'medium', duration: 25, goal: 'Improve cardio' },
+  { id: 2, title: 'Upper Body Strength', difficulty: 'hard', duration: 40, goal: 'Build strength' },
+];
+
 let mongoConnected = false;
 
 const getApiBaseUrl = () => {
@@ -33,7 +48,8 @@ const getUsers = async () => {
   }
 
   try {
-    return await User.find({}).lean();
+    const users = await User.find({}).lean();
+    return users.length > 0 ? users : fallbackUsers;
   } catch (error) {
     console.warn('Falling back to static users data.', error);
     return fallbackUsers;
@@ -46,10 +62,25 @@ const getActivities = async () => {
   }
 
   try {
-    return await Activity.find({}).lean();
+    const activities = await Activity.find({}).lean();
+    return activities.length > 0 ? activities : fallbackActivities;
   } catch (error) {
     console.warn('Falling back to static activities data.', error);
     return fallbackActivities;
+  }
+};
+
+const getCollection = async (model: any, fallback: Array<Record<string, unknown>>) => {
+  if (!mongoConnected) {
+    return fallback;
+  }
+
+  try {
+    const documents = await model.find({}).lean();
+    return documents.length > 0 ? documents : fallback;
+  } catch (error) {
+    console.warn('Falling back to static collection data.', error);
+    return fallback;
   }
 };
 
@@ -75,7 +106,7 @@ app.post('/api/users', async (req, res) => {
 });
 
 app.get('/api/teams', async (_req, res) => {
-  const teams = await Team.find({}).lean();
+  const teams = await getCollection(Team, fallbackTeams);
   res.json(teams);
 });
 
@@ -95,7 +126,7 @@ app.post('/api/activities', async (req, res) => {
 });
 
 app.get('/api/leaderboard', async (_req, res) => {
-  const leaderboard = await LeaderboardEntry.find({}).lean();
+  const leaderboard = await getCollection(LeaderboardEntry, fallbackLeaderboard);
   res.json(leaderboard);
 });
 
@@ -105,7 +136,7 @@ app.post('/api/leaderboard', async (req, res) => {
 });
 
 app.get('/api/workouts', async (_req, res) => {
-  const workouts = await Workout.find({}).lean();
+  const workouts = await getCollection(Workout, fallbackWorkouts);
   res.json(workouts);
 });
 
